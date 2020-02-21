@@ -59,17 +59,29 @@ class Scraper:
         metadata_text = metadata_div.find(class_='xgray xcontrast_txt').text
         metadata_parts = metadata_text.split('-')
         genres = self.get_genres(metadata_parts[2].strip())
-        metadata = {
-            'id': story_id,
-            'canon_type': pre_story_links[0].text,
-            'canon': pre_story_links[1].text,
-            'author_id': author_id,
-            'title': title,
-            'updated': int(times[0]['data-xutime']),
-            'published': int(times[1]['data-xutime']),
-            'lang': metadata_parts[1].strip(),
-            'genres': genres
-        }
+        if len(times) >=2:
+            metadata = {
+                'id': story_id,
+                'canon_type': pre_story_links[0].text,
+                'canon': pre_story_links[1].text,
+                'author_id': author_id,
+                'title': title,
+                'updated': int(times[0]['data-xutime']),
+                'published': int(times[1]['data-xutime']),
+                'lang': metadata_parts[1].strip(),
+                'genres': genres
+            }
+        else:
+            metadata = {
+                'id': story_id,
+                'canon_type': pre_story_links[0].text,
+                'canon': pre_story_links[1].text,
+                'author_id': author_id,
+                'title': title,
+                'published': int(times[0]['data-xutime']),
+                'lang': metadata_parts[1].strip(),
+                'genres': genres
+            }
         for parts in metadata_parts:
             parts = parts.strip()
             tag_and_val = parts.split(':')

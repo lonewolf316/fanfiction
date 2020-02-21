@@ -3,15 +3,17 @@ try:
     from urllib.parse import unquote_plus
 except ImportError:
     from urllib import unquote_plus
-import time, re, requests
+import time, re, requests, sys
 from bs4 import BeautifulSoup
+
+sys.setrecursionlimit(200000)
 
 class Scraper:
 
     def __init__(self):
         self.base_url = 'http://fanfiction.net/'
-        self.rate_limit = 1
-        self.parser = "html.parser"
+        self.rate_limit = 0
+        self.parser = "html5lib"
 
     def get_genres(self, genre_text):
         genres = genre_text.split('/')
@@ -49,21 +51,29 @@ class Scraper:
         url = '{0}/s/{1}'.format(self.base_url, story_id)
         result = requests.get(url)
         html = result.content
+        if "Story Not Found<hr size=1 noshade>Story is unavailable for reading. (A)</span>" in str(html) or "<hr size=1 noshade>Category for this story has been disabled. This is likely result of a category being removed for various reasons. Please visit the homepage for related announcements.</span>" in str(html):
+            return None
         soup = BeautifulSoup(html, self.parser)
         pre_story_links = soup.find(id='pre_story_links').find_all('a')
-        author_id = int(re.search(r"var userid = (.*);", str(soup)).groups()[0]);
-        title = re.search(r"var title = (.*);", str(soup)).groups()[0];
+        author_id = int(re.search(r"var userid = (.*);", str(soup)).groups()[0])
+        title = re.search(r"var title = (.*);", str(soup)).groups()[0]
         title = unquote_plus(title)[1:-1]
         metadata_div = soup.find(id='profile_top')
         times = metadata_div.find_all(attrs={'data-xutime':True})
         metadata_text = metadata_div.find(class_='xgray xcontrast_txt').text
         metadata_parts = metadata_text.split('-')
         genres = self.get_genres(metadata_parts[2].strip())
+        if len(pre_story_links)>1: # Regular
+            canon_type_str = pre_story_links[0].text
+            canon_str = pre_story_links[1].text
+        else: 
+            canon_type_str = "Cossover"
+            canon_str = pre_story_links[0].text
         if len(times) >=2:
             metadata = {
                 'id': story_id,
-                'canon_type': pre_story_links[0].text,
-                'canon': pre_story_links[1].text,
+                'canon_type': canon_type_str,
+                'canon':canon_str,
                 'author_id': author_id,
                 'title': title,
                 'updated': int(times[0]['data-xutime']),
@@ -74,8 +84,8 @@ class Scraper:
         else:
             metadata = {
                 'id': story_id,
-                'canon_type': pre_story_links[0].text,
-                'canon': pre_story_links[1].text,
+                'canon_type': canon_type_str,
+                'canon': canon_str,
                 'author_id': author_id,
                 'title': title,
                 'published': int(times[0]['data-xutime']),
@@ -115,6 +125,25 @@ class Scraper:
                 story_id, chapter_id)
             metadata['chapters'][chapter_id] = chapter
             metadata['reviews'][chapter_id] = chapter_reviews
+        return metadata
+
+    def scrape_story_text(self, story_id, keep_html=False):
+        metadata = self.scrape_story_metadata(story_id)
+        if metadata == None:
+            return None
+        metadata['chapters'] = {}
+        try:
+            num_chapters = metadata['num_chapters']
+        except:
+            num_chapters = 1
+            metadata['num_chapters'] = 1
+        # rate limit to follow fanfiction.net TOS
+        time.sleep(self.rate_limit)
+        for chapter_id in range(1, num_chapters + 1):
+            time.sleep(self.rate_limit)
+            chapter = self.scrape_chapter(story_id, chapter_id)
+            time.sleep(self.rate_limit)
+            metadata['chapters'][chapter_id] = chapter
         return metadata
 
     def scrape_chapter(self, story_id, chapter_id, keep_html=False):

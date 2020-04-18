@@ -51,17 +51,18 @@ class Scraper:
         url = '{0}/s/{1}'.format(self.base_url, story_id)
         result = requests.get(url)
         html = result.content
-        if "Story Not Found<hr size=1 noshade>Story is unavailable for reading. (A)</span>" in str(html) or "<hr size=1 noshade>Category for this story has been disabled. This is likely result of a category being removed for various reasons. Please visit the homepage for related announcements.</span>" in str(html):
-            return None
         soup = BeautifulSoup(html, self.parser)
-        pre_story_links = soup.find(id='pre_story_links').find_all('a')
-        author_id = int(re.search(r"var userid = (.*);", str(soup)).groups()[0])
-        title = re.search(r"var title = (.*);", str(soup)).groups()[0]
-        title = unquote_plus(title)[1:-1]
-        metadata_div = soup.find(id='profile_top')
-        times = metadata_div.find_all(attrs={'data-xutime':True})
-        metadata_text = metadata_div.find(class_='xgray xcontrast_txt').text
-        metadata_parts = metadata_text.split('-')
+        try:
+            pre_story_links = soup.find(id='pre_story_links').find_all('a')
+            author_id = int(re.search(r"var userid = (.*);", str(soup)).groups()[0])
+            title = re.search(r"var title = (.*);", str(soup)).groups()[0]
+            title = unquote_plus(title)[1:-1]
+            metadata_div = soup.find(id='profile_top')
+            times = metadata_div.find_all(attrs={'data-xutime':True})
+            metadata_text = metadata_div.find(class_='xgray xcontrast_txt').text
+            metadata_parts = metadata_text.split('-')
+        except: #Page has no story, such as an error page or something
+            return None
         genres = self.get_genres(metadata_parts[2].strip())
         if len(pre_story_links)>1: # Regular
             canon_type_str = pre_story_links[0].text
@@ -153,7 +154,12 @@ class Scraper:
         soup = BeautifulSoup(html, self.parser)
         chapter = soup.find(class_='storytext')
         if not keep_html:
-            chapter_text = chapter.get_text(' ').encode('utf8')
+            try:
+                chapter_text = chapter.get_text(' ').encode('utf8')
+            except:
+                error = ("Error:"+str(sys.exc_info()[0]))
+                print(error)
+                return(error)
         return chapter_text
 
     def scrape_reviews_for_chapter(self, story_id, chapter_id):

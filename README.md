@@ -1,4 +1,6 @@
 # Fanfiction Scraper
+**Note:** This is a badly edited fork of the original. This has been chopped up in order to work most effectively with my automated scraper. It mostly works the same as the original, but has been modified to return all information on one request, and return None if no story is found. This lets the scraper churn through all IDs without crashing.
+
 This repository contains scraping tools for [FanFiction.Net](http://fanfiction.net). These tools are meant to be used for non-commercial, research purposes. They were originally created for the following paper; please cite if you use this software for your research:
 
 Smitha Milli and David Bamman, "Beyond Canonical Texts: A Computational Analysis of Fanfiction" EMNLP 2016.
